@@ -12,27 +12,27 @@ async function main() {
   // Create Roles
   console.log('📋 Creating roles...')
   const superAdminRole = await prisma.role.upsert({
-    where: { name: 'Super Administrator' },
+    where: { name: 'SUPER_ADMINISTRATOR' },
     update: {},
-    create: { name: 'Super Administrator', description: 'Full system access' }
+    create: { name: 'SUPER_ADMINISTRATOR', description: 'Full system access' }
   })
 
   const hrAdminRole = await prisma.role.upsert({
-    where: { name: 'HR Administrator' },
+    where: { name: 'HR_ADMINISTRATOR' },
     update: {},
-    create: { name: 'HR Administrator', description: 'HR management access' }
+    create: { name: 'HR_ADMINISTRATOR', description: 'HR management access' }
   })
 
   const deptHeadRole = await prisma.role.upsert({
-    where: { name: 'Department Head' },
+    where: { name: 'DEPARTMENT_HEAD' },
     update: {},
-    create: { name: 'Department Head', description: 'Department level access' }
+    create: { name: 'DEPARTMENT_HEAD', description: 'Department level access' }
   })
 
   const employeeRole = await prisma.role.upsert({
-    where: { name: 'Employee' },
+    where: { name: 'EMPLOYEE' },
     update: {},
-    create: { name: 'Employee', description: 'Basic employee access' }
+    create: { name: 'EMPLOYEE', description: 'Basic employee access' }
   })
 
   // Create Permissions
