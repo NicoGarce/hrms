@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import Link from "next/link"
@@ -29,6 +29,7 @@ import {
   User,
   Settings,
   Command,
+  Check,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { CommandPalette } from "./CommandPalette"
@@ -42,12 +43,46 @@ interface DashboardShellProps {
   children: React.ReactNode
 }
 
+interface Notification {
+  id: string
+  title: string
+  message: string
+  readAt: string | null
+}
+
 export function DashboardShell({ user, children }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notificationOpen, setNotificationOpen] = useState(false)
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const navItems = getNavigationForRole(user.role || "EMPLOYEE")
+
+  const unreadCount = notifications.filter((n) => !n.readAt).length
+
+  useEffect(() => {
+    fetchNotifications()
+  }, [])
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch("/api/settings/notifications")
+      const data = await response.json()
+      setNotifications(data.slice(0, 5))
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error)
+    }
+  }
+
+  const markAsRead = async (id: string) => {
+    try {
+      await fetch(`/api/settings/notifications/${id}/read`, { method: "POST" })
+      fetchNotifications()
+    } catch (error) {
+      console.error("Failed to mark as read:", error)
+    }
+  }
 
   const initials = user.name
     ? user.name
@@ -155,13 +190,52 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
               <span className="sr-only">Toggle theme</span>
             </Button>
 
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <Badge variant="destructive" className="absolute -right-1 -top-1 h-4 w-4 rounded-full p-0 text-[10px]">
-                3
-              </Badge>
-              <span className="sr-only">Notifications</span>
-            </Button>
+            <DropdownMenu open={notificationOpen} onOpenChange={setNotificationOpen}>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <Badge variant="destructive" className="absolute -right-1 -top-1 h-4 w-4 rounded-full p-0 text-[10px]">
+                        {unreadCount}
+                      </Badge>
+                    )}
+                    <span className="sr-only">Notifications</span>
+                  </Button>
+                }
+              />
+              <DropdownMenuContent className="w-80" align="end">
+                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notifications.length === 0 ? (
+                  <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                    No notifications
+                  </div>
+                ) : (
+                  <DropdownMenuGroup>
+                    {notifications.map((notif) => (
+                      <DropdownMenuItem
+                        key={notif.id}
+                        className="flex flex-col items-start gap-1 p-3 cursor-pointer"
+                        onClick={() => !notif.readAt && markAsRead(notif.id)}
+                      >
+                        <div className="flex items-start justify-between w-full gap-2">
+                          <span className="text-sm font-medium">{notif.title}</span>
+                          {!notif.readAt && (
+                            <div className="h-2 w-2 rounded-full bg-chart-4 shrink-0" />
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">{notif.message}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem render={<Link href="/settings/notifications" />}>
+                  View all notifications
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger

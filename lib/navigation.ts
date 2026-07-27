@@ -61,7 +61,7 @@ export const navigation: NavItem[] = [
     title: "Attendance",
     href: "/attendance",
     icon: CalendarCheck,
-    roles: ["SUPER_ADMINISTRATOR", "HR_ADMINISTRATOR"],
+    roles: ["SUPER_ADMINISTRATOR", "HR_ADMINISTRATOR", "DEPARTMENT_HEAD"],
   },
   {
     title: "Leave",
@@ -79,6 +79,12 @@ export const navigation: NavItem[] = [
     href: "/payroll",
     icon: Banknote,
     roles: ["SUPER_ADMINISTRATOR", "HR_ADMINISTRATOR"],
+  },
+  {
+    title: "My Payslips",
+    href: "/payslips",
+    icon: Banknote,
+    roles: ["SUPER_ADMINISTRATOR", "HR_ADMINISTRATOR", "DEPARTMENT_HEAD", "EMPLOYEE"],
   },
   {
     title: "Performance",
