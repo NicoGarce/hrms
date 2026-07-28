@@ -25,6 +25,7 @@ export async function GET(req: Request) {
         logoUrl: "",
         timezone: "UTC",
         currency: "USD",
+        theme: "teal",
       })
     }
 
@@ -36,6 +37,7 @@ export async function GET(req: Request) {
       logoUrl: settings.logoUrl,
       timezone: settings.timezone,
       currency: settings.currency,
+      theme: settings.theme,
     })
   } catch (error) {
     console.error("Failed to fetch company settings:", error)
