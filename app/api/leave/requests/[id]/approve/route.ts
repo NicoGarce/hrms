@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { logAudit } from "@/lib/audit"
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -22,6 +23,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         status: "APPROVED",
         approvedBy: session.user.id,
       },
+    })
+
+    logAudit({
+      userId: session.user.id,
+      action: "APPROVE",
+      resource: "leave_request",
+      resourceId: id,
     })
 
     return NextResponse.json(leaveRequest)

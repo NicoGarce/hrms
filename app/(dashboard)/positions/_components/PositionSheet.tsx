@@ -13,28 +13,49 @@ interface Department {
   code: string
 }
 
-interface PositionSheetProps {
-  departments: Department[]
+interface Position {
+  id: string
+  title: string
+  departmentId: string
+  level: string
+  description: string | null
 }
 
-export function PositionSheet({ departments }: PositionSheetProps) {
-  const [open, setOpen] = useState(false)
-  const [formData, setFormData] = useState({ title: "", departmentId: "", level: "MID", description: "" })
+interface PositionSheetProps {
+  departments: Department[]
+  position?: Position | null
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function PositionSheet({ departments, position, open: controlledOpen, onOpenChange }: PositionSheetProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
+
+  const [formData, setFormData] = useState({
+    title: position?.title || "",
+    departmentId: position?.departmentId || "",
+    level: position?.level || "MID",
+    description: position?.description || "",
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     try {
-      const response = await fetch("/api/positions", {
-        method: "POST",
+      const url = position ? `/api/positions/${position.id}` : "/api/positions"
+      const method = position ? "PUT" : "POST"
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       })
 
       if (response.ok) {
-        toast.success("Position created")
+        toast.success(position ? "Position updated" : "Position created")
         setOpen(false)
-        setFormData({ title: "", departmentId: "", level: "MID", description: "" })
         window.location.reload()
       } else {
         toast.error("Failed to save position")
@@ -47,12 +68,12 @@ export function PositionSheet({ departments }: PositionSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger
-        render={<Button className="gap-2"><Plus className="h-4 w-4" />Add Position</Button>}
-      />
+      {!position && (
+        <SheetTrigger render={<Button className="gap-2"><Plus className="h-4 w-4" />Add Position</Button>} />
+      )}
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Add Position</SheetTitle>
+          <SheetTitle>{position ? "Edit Position" : "Add Position"}</SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
@@ -103,7 +124,7 @@ export function PositionSheet({ departments }: PositionSheetProps) {
             />
           </div>
           <Button type="submit" className="w-full">
-            Create Position
+            {position ? "Update" : "Create"} Position
           </Button>
         </form>
       </SheetContent>

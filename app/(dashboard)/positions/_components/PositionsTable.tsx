@@ -1,8 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { PositionSheet } from "./PositionSheet"
 
 interface Position {
   id: string
@@ -32,6 +34,9 @@ interface PositionsTableProps {
 }
 
 export function PositionsTable({ positions, departments }: PositionsTableProps) {
+  const [editingPosition, setEditingPosition] = useState<Position | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+
   const levelColors = {
     JUNIOR: "bg-chart-1 text-chart-1-foreground",
     MID: "bg-chart-2 text-chart-2-foreground",
@@ -57,6 +62,11 @@ export function PositionsTable({ positions, departments }: PositionsTableProps) 
     }
   }
 
+  const openEditSheet = (position: Position) => {
+    setEditingPosition(position)
+    setSheetOpen(true)
+  }
+
   if (positions.length === 0) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -66,55 +76,75 @@ export function PositionsTable({ positions, departments }: PositionsTableProps) 
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b">
-            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Title</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Department</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Level</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Employees</th>
-            <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {positions.map((position) => (
-            <tr key={position.id} className="border-b hover:bg-muted/50">
-              <td className="px-4 py-3 font-medium">{position.title}</td>
-              <td className="px-4 py-3">
-                <span className="inline-flex items-center px-2 py-1 rounded-md bg-chart-2 text-chart-2-foreground text-xs font-medium">
-                  {position.department.name}
-                </span>
-              </td>
-              <td className="px-4 py-3">
-                <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${levelColors[position.level as keyof typeof levelColors]}`}>
-                  {position.level}
-                </span>
-              </td>
-              <td className="px-4 py-3 font-mono text-sm">{position._count.employees}</td>
-              <td className="px-4 py-3">
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => window.location.href = `/positions/edit/${position.id}`}
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-destructive"
-                    onClick={() => handleDelete(position.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </td>
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Title</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Department</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Level</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Employees</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {positions.map((position) => (
+              <tr key={position.id} className="border-b hover:bg-muted/50">
+                <td className="px-4 py-3 font-medium">{position.title}</td>
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center px-2 py-1 rounded-md bg-chart-2 text-chart-2-foreground text-xs font-medium">
+                    {position.department.name}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${levelColors[position.level as keyof typeof levelColors]}`}>
+                    {position.level}
+                  </span>
+                </td>
+                <td className="px-4 py-3 font-mono text-sm">{position._count.employees}</td>
+                <td className="px-4 py-3">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => openEditSheet(position)}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-destructive"
+                      onClick={() => handleDelete(position.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editingPosition && (
+        <PositionSheet
+          departments={departments}
+          position={{
+            id: editingPosition.id,
+            title: editingPosition.title,
+            departmentId: editingPosition.departmentId,
+            level: editingPosition.level,
+            description: editingPosition.description,
+          }}
+          open={sheetOpen}
+          onOpenChange={(open) => {
+            setSheetOpen(open)
+            if (!open) setEditingPosition(null)
+          }}
+        />
+      )}
+    </>
   )
 }

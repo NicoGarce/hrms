@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,7 +29,8 @@ interface Applicant {
 }
 
 export default function ApplicantsPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const user = session?.user
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [loading, setLoading] = useState(true)
   const [stageFilter, setStageFilter] = useState<string>("ALL")
@@ -113,15 +114,9 @@ export default function ApplicantsPage() {
   })
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchApplicants()
-    })
-  }, [jobId, stageFilter])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (user) { fetchApplicants() }
+  }, [status, user, jobId, stageFilter])
 
   const fetchApplicants = async () => {
     setLoading(true)

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,7 +22,9 @@ interface PayrollItem {
 }
 
 export default function PayrollItemsPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const user = session?.user
   const [items, setItems] = useState<PayrollItem[]>([])
   const [loading, setLoading] = useState(true)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -30,16 +33,9 @@ export default function PayrollItemsPage() {
   const [payrolls, setPayrolls] = useState<{ id: string; period: string; employeeName: string }[]>([])
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchItems()
-      fetchPayrolls()
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (session?.user) { fetchItems(); fetchPayrolls() }
+  }, [status, session])
 
   const fetchItems = async () => {
     setLoading(true)
@@ -136,7 +132,7 @@ export default function PayrollItemsPage() {
     BONUS: "bg-chart-2 text-chart-2-foreground",
   }
 
-  if (!user) return null
+  if (status === "loading") return null
 
   return (
       <div className="space-y-6 p-8">

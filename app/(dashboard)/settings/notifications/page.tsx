@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Bell, Check } from "lucide-react"
@@ -16,20 +17,15 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchNotifications()
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (session?.user) { fetchNotifications() }
+  }, [status, session, router])
 
   const fetchNotifications = async () => {
     setLoading(true)
@@ -62,7 +58,7 @@ export default function NotificationsPage() {
     }
   }
 
-  if (!user) return null
+  if (status === "loading") return null
 
   return (
       <div className="space-y-6 p-8">

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,7 +25,9 @@ interface PayrollRecord {
 }
 
 export default function AdminPayslipsPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const user = session?.user
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPayroll, setSelectedPayroll] = useState<PayrollRecord | null>(null)
@@ -32,15 +35,9 @@ export default function AdminPayslipsPage() {
   const [periodFilter, setPeriodFilter] = useState("")
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchPayrolls()
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (session?.user) { fetchPayrolls() }
+  }, [status, session])
 
   const fetchPayrolls = async () => {
     setLoading(true)
@@ -62,7 +59,7 @@ export default function AdminPayslipsPage() {
     return matchesEmployee && matchesPeriod
   })
 
-  if (!user) return null
+  if (status === "loading") return null
 
   return (
     <>

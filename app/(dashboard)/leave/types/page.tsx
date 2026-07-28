@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,7 +18,9 @@ interface LeaveType {
 }
 
 export default function LeaveTypesPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const user = session?.user
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
   const [loading, setLoading] = useState(true)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -25,15 +28,9 @@ export default function LeaveTypesPage() {
   const [formData, setFormData] = useState({ name: "", daysAllowed: "", carryForward: false })
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchLeaveTypes()
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (session?.user) { fetchLeaveTypes() }
+  }, [status, session])
 
   const fetchLeaveTypes = async () => {
     setLoading(true)
@@ -112,7 +109,7 @@ export default function LeaveTypesPage() {
     setSheetOpen(true)
   }
 
-  if (!user) return null
+  if (status === "loading") return null
 
   return (
       <div className="space-y-6 p-8">

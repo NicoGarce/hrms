@@ -3,6 +3,7 @@ import { Toaster } from "sonner"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { DashboardShell } from "./_components/DashboardShell"
+import { SessionProvider } from "@/components/session-provider"
 
 export default async function DashboardLayout({
   children,
@@ -17,9 +18,11 @@ export default async function DashboardLayout({
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <DashboardShell user={session.user}>
-        {children}
-      </DashboardShell>
+      <SessionProvider>
+        <DashboardShell user={session.user}>
+          {children}
+        </DashboardShell>
+      </SessionProvider>
       <Toaster />
     </ThemeProvider>
   )

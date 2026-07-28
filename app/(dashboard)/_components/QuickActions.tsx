@@ -11,7 +11,7 @@ export function QuickActions() {
     {
       label: "Request Leave",
       icon: Plane,
-      href: "/leave/request",
+      href: "/leave",
     },
     {
       label: "Add Employee",

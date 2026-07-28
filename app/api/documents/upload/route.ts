@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     const document = await prisma.document.create({
       data: {
         employeeId: targetEmployeeId,
-        type: type as any,
+        type,
         name: file.name,
         fileUrl: `/uploads/${filename}`,
       },

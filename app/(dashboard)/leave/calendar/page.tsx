@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -18,21 +19,17 @@ interface LeaveRequest {
 }
 
 export default function LeaveCalendarPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const user = session?.user
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState(new Date())
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchLeaveRequests()
-    })
-  }, [selectedMonth])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (user) { fetchLeaveRequests() }
+  }, [status, user, selectedMonth])
 
   const fetchLeaveRequests = async () => {
     setLoading(true)

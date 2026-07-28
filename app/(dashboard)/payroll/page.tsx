@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,7 +24,8 @@ interface PayrollRecord {
 }
 
 export default function PayrollPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const user = session?.user
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -34,16 +35,9 @@ export default function PayrollPage() {
   const router = useRouter()
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchPayrolls()
-      fetchEmployees()
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (user) { fetchPayrolls(); fetchEmployees() }
+  }, [status, user])
 
   const fetchPayrolls = async () => {
     setLoading(true)

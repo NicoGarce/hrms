@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,22 +19,18 @@ interface PayrollHistory {
 }
 
 export default function PayrollHistoryPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const user = session?.user
   const [history, setHistory] = useState<PayrollHistory[]>([])
   const [loading, setLoading] = useState(true)
   const [periodFilter, setPeriodFilter] = useState("")
   const [employeeFilter, setEmployeeFilter] = useState("")
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchHistory()
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (session?.user) { fetchHistory() }
+  }, [status, session])
 
   const fetchHistory = async () => {
     setLoading(true)
@@ -55,7 +52,7 @@ export default function PayrollHistoryPage() {
     return matchesPeriod && matchesEmployee
   })
 
-  if (!user) return null
+  if (status === "loading") return null
 
   return (
       <div className="space-y-6 p-8">

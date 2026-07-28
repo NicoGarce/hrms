@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
+import { logAudit } from "@/lib/audit"
 
 export async function updateAttendanceStatus(formData: FormData) {
   const session = await auth()
@@ -51,6 +52,14 @@ export async function updateAttendanceStatus(formData: FormData) {
         },
       })
     }
+
+    logAudit({
+      userId: session.user.id,
+      action: "UPDATE",
+      resource: "attendance",
+      resourceId: `${employeeId}:${dateStr}`,
+      details: { employeeId, date: dateStr, status },
+    })
 
     revalidatePath("/attendance")
   } catch (error) {

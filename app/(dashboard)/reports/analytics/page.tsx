@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, Users, CalendarCheck, Plane } from "lucide-react"
 
@@ -11,22 +12,17 @@ interface TrendData {
 }
 
 export default function AnalyticsReportPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [headcountTrend, setHeadcountTrend] = useState<TrendData[]>([])
   const [attendanceTrend, setAttendanceTrend] = useState<TrendData[]>([])
   const [leaveTrend, setLeaveTrend] = useState<TrendData[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchAnalytics()
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (session?.user) { fetchAnalytics() }
+  }, [status, session, router])
 
   const fetchAnalytics = async () => {
     setLoading(true)
@@ -66,7 +62,7 @@ export default function AnalyticsReportPage() {
     )
   }
 
-  if (!user) return null
+  if (status === "loading") return null
 
   return (
       <div className="space-y-6 p-8">

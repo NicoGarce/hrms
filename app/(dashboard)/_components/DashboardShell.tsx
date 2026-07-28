@@ -30,6 +30,8 @@ import {
   Settings,
   Command,
   Check,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { CommandPalette } from "./CommandPalette"
@@ -52,6 +54,7 @@ interface Notification {
 
 export function DashboardShell({ user, children }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [notificationOpen, setNotificationOpen] = useState(false)
@@ -94,7 +97,8 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
 
   const navLinkClasses = (isActive: boolean) =>
     cn(
-      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+      "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+      collapsed ? "justify-center gap-0" : "gap-3",
       isActive
         ? "bg-sidebar-primary text-sidebar-primary-foreground"
         : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -103,11 +107,15 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar — the ledger's cover: always the darkest surface */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-sidebar-border bg-sidebar">
-        <div className="flex h-14 items-center border-b border-sidebar-border px-6">
-          <span className="font-heading text-xl font-bold text-sidebar-foreground">HRMS</span>
+      <aside className={cn("hidden lg:flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200", collapsed ? "w-16" : "w-64")}>
+        <div className={cn("flex h-14 items-center border-b border-sidebar-border", collapsed ? "justify-center px-0" : "px-6")}>
+          {collapsed ? (
+            <span className="font-heading text-lg font-bold text-sidebar-foreground">H</span>
+          ) : (
+            <span className="font-heading text-xl font-bold text-sidebar-foreground">HRMS</span>
+          )}
         </div>
-        <nav className="flex-1 space-y-1 p-4">
+        <nav className="flex-1 space-y-1 p-2">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
@@ -116,13 +124,25 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
                 key={item.href}
                 href={item.href}
                 className={navLinkClasses(isActive)}
+                title={collapsed ? item.title : undefined}
               >
-                <Icon className="h-4 w-4" />
-                {item.title}
+                <Icon className="h-4 w-4 shrink-0" />
+                {!collapsed && item.title}
               </Link>
             )
           })}
         </nav>
+        <div className="border-t border-sidebar-border p-2">
+          <Button
+            variant="ghost"
+            size={collapsed ? "icon" : "default"}
+            className={cn("w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent", collapsed ? "" : "justify-start gap-3")}
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            <PanelLeftClose className="h-4 w-4 shrink-0" />
+            {!collapsed && "Collapse"}
+          </Button>
+        </div>
       </aside>
 
       {/* Mobile Sidebar */}
@@ -205,15 +225,15 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
                 }
               />
               <DropdownMenuContent className="w-80" align="end">
-                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {notifications.length === 0 ? (
-                  <div className="px-2 py-4 text-sm text-muted-foreground text-center">
-                    No notifications
-                  </div>
-                ) : (
-                  <DropdownMenuGroup>
-                    {notifications.map((notif) => (
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {notifications.length === 0 ? (
+                    <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                      No notifications
+                    </div>
+                  ) : (
+                    notifications.map((notif) => (
                       <DropdownMenuItem
                         key={notif.id}
                         className="flex flex-col items-start gap-1 p-3 cursor-pointer"
@@ -227,9 +247,9 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
                         </div>
                         <span className="text-xs text-muted-foreground">{notif.message}</span>
                       </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuGroup>
-                )}
+                    ))
+                  )}
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem render={<Link href="/settings/notifications" />}>
                   View all notifications

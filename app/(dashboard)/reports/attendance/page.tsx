@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,25 +19,18 @@ interface AttendanceReport {
 }
 
 export default function AttendanceReportPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [data, setData] = useState<AttendanceReport[]>([])
   const [loading, setLoading] = useState(true)
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
+  const today = new Date()
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+  const [startDate, setStartDate] = useState(firstDay.toISOString().split("T")[0])
+  const [endDate, setEndDate] = useState(today.toISOString().split("T")[0])
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      const today = new Date()
-      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
-      setStartDate(firstDay.toISOString().split("T")[0])
-      setEndDate(today.toISOString().split("T")[0])
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+  }, [status, router])
 
   useEffect(() => {
     if (startDate && endDate) fetchReport()
@@ -67,7 +61,7 @@ export default function AttendanceReportPage() {
     a.click()
   }
 
-  if (!user) return null
+  if (status === "loading") return null
 
   return (
       <div className="space-y-6 p-8">

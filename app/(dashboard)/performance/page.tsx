@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -36,7 +37,9 @@ interface PerformanceReview {
 }
 
 export default function PerformancePage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const user = session?.user
   const [reviews, setReviews] = useState<PerformanceReview[]>([])
   const [loading, setLoading] = useState(true)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -55,16 +58,9 @@ export default function PerformancePage() {
   })
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchReviews()
-      fetchEmployees()
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (user) { fetchReviews(); fetchEmployees() }
+  }, [status, user])
 
   const fetchReviews = async () => {
     setLoading(true)
@@ -143,7 +139,7 @@ export default function PerformancePage() {
             <h1 className="font-heading text-2xl font-bold">Performance Reviews</h1>
             <p className="text-muted-foreground">Manage employee performance evaluations</p>
           </div>
-          {(user.role === "SUPER_ADMINISTRATOR" || user.role === "HR_ADMINISTRATOR" || user.role === "DEPARTMENT_HEAD") && (
+          {(user?.role === "SUPER_ADMINISTRATOR" || user?.role === "HR_ADMINISTRATOR" || user?.role === "DEPARTMENT_HEAD") && (
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger
                 render={<Button className="gap-2"><Plus className="h-4 w-4" />New Review</Button>}
@@ -292,7 +288,7 @@ export default function PerformancePage() {
                           </Badge>
                         </td>
                         <td className="px-4 py-3">
-                          {review.status === "SUBMITTED" && user.role === "EMPLOYEE" && (
+                          {review.status === "SUBMITTED" && user?.role === "EMPLOYEE" && (
                             <Button
                               variant="ghost"
                               size="sm"

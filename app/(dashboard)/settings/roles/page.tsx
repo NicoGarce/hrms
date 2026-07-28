@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Shield, Key } from "lucide-react"
@@ -14,24 +15,21 @@ interface RolePermission {
 }
 
 export default function RolesPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [permissions, setPermissions] = useState<RolePermission[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (status === "authenticated" && session?.user) {
       if (session.user.role !== "SUPER_ADMINISTRATOR") {
-        window.location.href = "/dashboard"
+        router.push("/dashboard")
         return
       }
       fetchPermissions()
-    })
-  }, [])
+    }
+  }, [status, session, router])
 
   const fetchPermissions = async () => {
     setLoading(true)
@@ -46,9 +44,9 @@ export default function RolesPage() {
     }
   }
 
-  if (!user) return null
+  if (status === "loading") return null
 
-  if (user.role !== "SUPER_ADMINISTRATOR") {
+  if (session?.user?.role !== "SUPER_ADMINISTRATOR") {
     return (
       <div className="space-y-6 p-8">
         <div className="flex items-center justify-center py-8">

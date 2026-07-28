@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -20,30 +21,28 @@ interface MyPayslip {
 }
 
 export default function MyPayslipsPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const user = session?.user
   const [payslips, setPayslips] = useState<MyPayslip[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPayslip, setSelectedPayslip] = useState<MyPayslip | null>(null)
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchMyPayslips()
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (user) { fetchMyPayslips() }
+  }, [status, user])
 
   const fetchMyPayslips = async () => {
     setLoading(true)
     try {
       const response = await fetch("/api/payslips")
+      if (!response.ok) { setPayslips([]); return }
       const data = await response.json()
-      setPayslips(data)
+      setPayslips(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Failed to fetch payslips:", error)
+      setPayslips([])
     } finally {
       setLoading(false)
     }
@@ -149,7 +148,7 @@ export default function MyPayslipsPage() {
                 </Button>
               </div>
               <PayslipView
-                employeeName={`${user.firstName || ""} ${user.lastName || ""}`}
+                employeeName={user?.email || "Employee"}
                 period={new Date(selectedPayslip.year, selectedPayslip.month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
                 baseSalary={selectedPayslip.baseSalary}
                 grossSalary={selectedPayslip.grossSalary}

@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
+import { auth } from "@/lib/auth"
+import { logAudit } from "@/lib/audit"
 import { employeeFormSchema, type EmployeeFormValues } from "../_lib/schema"
 
 export type ActionResult =
@@ -84,6 +86,15 @@ export async function createEmployee(data: EmployeeFormValues): Promise<ActionRe
       return employee
     })
 
+    const session = await auth()
+    await logAudit({
+      userId: session?.user?.id,
+      action: "CREATE",
+      resource: "employee",
+      resourceId: result.id,
+      details: { firstName, lastName, employeeCode },
+    })
+
     revalidatePath("/employees")
     return { success: true, employeeId: result.id }
   } catch (error) {
@@ -159,6 +170,15 @@ export async function updateEmployee(
       }
     })
 
+    const session = await auth()
+    await logAudit({
+      userId: session?.user?.id,
+      action: "UPDATE",
+      resource: "employee",
+      resourceId: id,
+      details: { firstName, lastName },
+    })
+
     revalidatePath("/employees")
     return { success: true, employeeId: id }
   } catch (error) {
@@ -184,6 +204,15 @@ export async function deleteEmployee(id: string): Promise<ActionResult> {
         data: { deletedAt: new Date() },
       }),
     ])
+
+    const session = await auth()
+    await logAudit({
+      userId: session?.user?.id,
+      action: "DELETE",
+      resource: "employee",
+      resourceId: id,
+      details: { firstName: existing.firstName, lastName: existing.lastName },
+    })
 
     revalidatePath("/employees")
     return { success: true }

@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { writeFile, mkdir } from "fs/promises"
-import { join } from "path"
-import { existsSync } from "fs"
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -12,7 +9,7 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url)
-  const typeFilter = searchParams.get("type") || "ALL"
+  const typeFilter = searchParams.get("type") || ""
 
   try {
     const employee = await prisma.employee.findFirst({
@@ -20,7 +17,7 @@ export async function GET(req: Request) {
     })
 
     const where: any = {}
-    if (typeFilter !== "ALL") where.type = typeFilter
+    if (typeFilter) where.type = { contains: typeFilter, mode: "insensitive" }
     
     const userRole = session.user.role as string
     if (userRole === "EMPLOYEE" && employee) {

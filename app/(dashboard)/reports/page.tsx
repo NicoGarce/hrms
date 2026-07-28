@@ -1,25 +1,21 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Users, CalendarClock, Plane, DollarSign, TrendingUp } from "lucide-react"
 
 export default function ReportsPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-    })
-  }, [])
+    if (status === "unauthenticated") { router.push("/login"); return }
+  }, [status, router])
 
-  if (!user) return null
+  if (status === "loading") return null
 
   const reports = [
     {
@@ -69,7 +65,7 @@ export default function ReportsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {reports.map((report) => {
-            if (report.restricted && user.role !== "SUPER_ADMINISTRATOR" && user.role !== "HR_ADMINISTRATOR") {
+            if (report.restricted && session?.user?.role !== "SUPER_ADMINISTRATOR" && session?.user?.role !== "HR_ADMINISTRATOR") {
               return null
             }
             const Icon = report.icon

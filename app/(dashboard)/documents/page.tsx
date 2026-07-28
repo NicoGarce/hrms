@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Upload, Download, Trash2, FileText } from "lucide-react"
+import { Upload, Download, Trash2, FileText, Search } from "lucide-react"
 import { toast } from "sonner"
 
 interface Document {
@@ -20,34 +21,32 @@ interface Document {
 }
 
 export default function DocumentsPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const user = session?.user
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
-  const [categoryFilter, setCategoryFilter] = useState<string>("ALL")
+  const [searchFilter, setSearchFilter] = useState<string>("")
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
-  const [uploadDocType, setUploadDocType] = useState<string>("CONTRACT")
+  const [uploadDocType, setUploadDocType] = useState<string>("")
   const [uploadEmployeeId, setUploadEmployeeId] = useState<string>("")
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([])
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (user) {
       fetchDocuments()
       if (user?.role === "SUPER_ADMINISTRATOR" || user?.role === "HR_ADMINISTRATOR") {
         fetchEmployees()
       }
-    })
-  }, [categoryFilter])
+    }
+  }, [status, user, searchFilter])
 
   const fetchDocuments = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/documents?type=${categoryFilter}`)
+      const response = await fetch(`/api/documents?type=${searchFilter}`)
       const data = await response.json()
       setDocuments(data)
     } catch (error) {
@@ -121,13 +120,6 @@ export default function DocumentsPage() {
     window.open(fileUrl, "_blank")
   }
 
-  const typeColors = {
-    CONTRACT: "bg-chart-1 text-chart-1-foreground",
-    ID: "bg-chart-2 text-chart-2-foreground",
-    CERTIFICATE: "bg-chart-3 text-chart-3-foreground",
-    OTHER: "bg-slate text-slate-foreground",
-  }
-
   if (!user) return null
 
   return (
@@ -139,42 +131,14 @@ export default function DocumentsPage() {
             <p className="text-muted-foreground">Manage employee documents</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 border rounded-lg p-1">
-              <Button
-                variant={categoryFilter === "ALL" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setCategoryFilter("ALL")}
-              >
-                All
-              </Button>
-              <Button
-                variant={categoryFilter === "CONTRACT" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setCategoryFilter("CONTRACT")}
-              >
-                Contracts
-              </Button>
-              <Button
-                variant={categoryFilter === "ID" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setCategoryFilter("ID")}
-              >
-                IDs
-              </Button>
-              <Button
-                variant={categoryFilter === "CERTIFICATE" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setCategoryFilter("CERTIFICATE")}
-              >
-                Certificates
-              </Button>
-              <Button
-                variant={categoryFilter === "OTHER" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setCategoryFilter("OTHER")}
-              >
-                Other
-              </Button>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Filter by document type..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                className="w-56 pl-8 h-9"
+              />
             </div>
             <Button
               className="gap-2"
@@ -220,9 +184,7 @@ export default function DocumentsPage() {
                         </td>
                         <td className="px-4 py-3">{doc.employeeName}</td>
                         <td className="px-4 py-3">
-                          <Badge className={typeColors[doc.type as keyof typeof typeColors] || ""}>
-                            {doc.type}
-                          </Badge>
+                          <Badge variant="outline">{doc.type}</Badge>
                         </td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">
                           {new Date(doc.uploadedAt).toLocaleDateString()}
@@ -236,7 +198,7 @@ export default function DocumentsPage() {
                             >
                               <Download className="h-3 w-3" />
                             </Button>
-                            {(user.role === "SUPER_ADMINISTRATOR" || user.role === "HR_ADMINISTRATOR") && (
+                            {(user?.role === "SUPER_ADMINISTRATOR" || user?.role === "HR_ADMINISTRATOR") && (
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
@@ -273,16 +235,11 @@ export default function DocumentsPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Document Type</label>
-              <select
+              <Input
+                placeholder="e.g. Contract, SSS, PhilHealth, TIN..."
                 value={uploadDocType}
                 onChange={(e) => setUploadDocType(e.target.value)}
-                className="w-full h-8 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm"
-              >
-                <option value="CONTRACT">Contract</option>
-                <option value="ID">ID</option>
-                <option value="CERTIFICATE">Certificate</option>
-                <option value="OTHER">Other</option>
-              </select>
+              />
             </div>
             {(user.role === "SUPER_ADMINISTRATOR" || user.role === "HR_ADMINISTRATOR") && (
               <div className="space-y-2">

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,7 +23,8 @@ interface User {
 }
 
 export default function UsersPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -74,19 +76,15 @@ export default function UsersPage() {
   })
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (status === "authenticated" && session?.user) {
       if (session.user.role !== "SUPER_ADMINISTRATOR") {
-        window.location.href = "/dashboard"
+        router.push("/dashboard")
         return
       }
       fetchUsers()
-    })
-  }, [])
+    }
+  }, [status, session, router])
 
   const fetchUsers = async () => {
     setLoading(true)
@@ -101,9 +99,9 @@ export default function UsersPage() {
     }
   }
 
-  if (!user) return null
+  if (status === "loading") return null
 
-  if (user.role !== "SUPER_ADMINISTRATOR") {
+  if (session?.user?.role !== "SUPER_ADMINISTRATOR") {
     return (
       <div className="space-y-6 p-8">
         <div className="flex items-center justify-center py-8">

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,7 +26,8 @@ interface OvertimeRecord {
 }
 
 export default function OvertimePage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [data, setData] = useState<OvertimeRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState(new Date())
@@ -66,13 +68,8 @@ export default function OvertimePage() {
   })
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      // Fetch employee to get departmentId for DEPARTMENT_HEAD role
+    if (status === "unauthenticated") { router.push("/login"); return }
+    if (session?.user) {
       if (session.user.role === "DEPARTMENT_HEAD") {
         fetch(`/api/employee/by-email?email=${session.user.email}`)
           .then(res => res.json())
@@ -82,8 +79,8 @@ export default function OvertimePage() {
       } else {
         fetchOvertime(session.user.role, null)
       }
-    })
-  }, [selectedMonth])
+    }
+  }, [status, session, selectedMonth])
 
   const fetchOvertime = async (role: string, departmentId: string | null) => {
     setLoading(true)
@@ -108,7 +105,7 @@ export default function OvertimePage() {
   const nextMonth = new Date(selectedMonth)
   nextMonth.setMonth(nextMonth.getMonth() + 1)
 
-  if (!user) return null
+  if (status === "loading") return null
 
   return (
       <div className="space-y-6 p-8">

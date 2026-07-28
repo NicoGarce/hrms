@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { logAudit } from "@/lib/audit"
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -33,6 +34,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         reason: `${existingRequest.reason}\n\nRejection reason: ${reason}`,
         approvedBy: session.user.id,
       },
+    })
+
+    logAudit({
+      userId: session.user.id,
+      action: "REJECT",
+      resource: "leave_request",
+      resourceId: id,
+      details: { reason },
     })
 
     return NextResponse.json(leaveRequest)

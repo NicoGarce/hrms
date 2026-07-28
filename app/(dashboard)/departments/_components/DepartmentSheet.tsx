@@ -13,28 +13,49 @@ interface Employee {
   lastName: string
 }
 
-interface DepartmentSheetProps {
-  employees: Employee[]
+interface Department {
+  id: string
+  name: string
+  code: string
+  description: string | null
+  headId: string | null
 }
 
-export function DepartmentSheet({ employees }: DepartmentSheetProps) {
-  const [open, setOpen] = useState(false)
-  const [formData, setFormData] = useState({ name: "", code: "", description: "", headId: "" })
+interface DepartmentSheetProps {
+  employees: Employee[]
+  department?: Department | null
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function DepartmentSheet({ employees, department, open: controlledOpen, onOpenChange }: DepartmentSheetProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
+
+  const [formData, setFormData] = useState({
+    name: department?.name || "",
+    code: department?.code || "",
+    description: department?.description || "",
+    headId: department?.headId || "",
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     try {
-      const response = await fetch("/api/departments", {
-        method: "POST",
+      const url = department ? `/api/departments/${department.id}` : "/api/departments"
+      const method = department ? "PUT" : "POST"
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       })
 
       if (response.ok) {
-        toast.success("Department created")
+        toast.success(department ? "Department updated" : "Department created")
         setOpen(false)
-        setFormData({ name: "", code: "", description: "", headId: "" })
         window.location.reload()
       } else {
         toast.error("Failed to save department")
@@ -47,12 +68,12 @@ export function DepartmentSheet({ employees }: DepartmentSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger
-        render={<Button className="gap-2"><Plus className="h-4 w-4" />Add Department</Button>}
-      />
+      {!department && (
+        <SheetTrigger render={<Button className="gap-2"><Plus className="h-4 w-4" />Add Department</Button>} />
+      )}
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Add Department</SheetTitle>
+          <SheetTitle>{department ? "Edit Department" : "Add Department"}</SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
@@ -97,7 +118,7 @@ export function DepartmentSheet({ employees }: DepartmentSheetProps) {
             </select>
           </div>
           <Button type="submit" className="w-full">
-            Create Department
+            {department ? "Update" : "Create"} Department
           </Button>
         </form>
       </SheetContent>

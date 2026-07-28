@@ -4,21 +4,23 @@ import { prisma } from "@/lib/prisma"
 import { format, startOfDay, endOfDay } from "date-fns"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, ChevronLeft, ChevronRight, Check, X, Clock } from "lucide-react"
 import { updateAttendanceStatus } from "./actions"
+import { AttendanceDatePicker } from "./_components/AttendanceDatePicker"
+import Link from "next/link"
 
 interface AttendancePageProps {
-  searchParams: { date?: string }
+  searchParams: Promise<{ date?: string }>
 }
 
 export default async function AttendancePage({ searchParams }: AttendancePageProps) {
   const session = await auth()
   if (!session?.user) redirect("/login")
 
+  const sp = await searchParams
   const userRole = session.user.role as string
-  const selectedDate = searchParams.date ? new Date(searchParams.date) : new Date()
+  const selectedDate = sp.date ? new Date(sp.date) : new Date()
   const dateStart = startOfDay(selectedDate)
   const dateEnd = endOfDay(selectedDate)
 
@@ -98,28 +100,19 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <div className="flex items-center justify-between">
               <CardTitle>Attendance for {format(selectedDate, "MMMM d, yyyy")}</CardTitle>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  render={<a href={`?date=${format(prevDay, "yyyy-MM-dd")}`} />}
+                <Link
+                  href={`?date=${format(prevDay, "yyyy-MM-dd")}`}
+                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background hover:bg-muted hover:text-foreground"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Input
-                  type="date"
-                  defaultValue={format(selectedDate, "yyyy-MM-dd")}
-                  className="w-40"
-                  onChange={(e) => {
-                    window.location.href = `?date=${e.target.value}`
-                  }}
-                />
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  render={<a href={`?date=${format(nextDay, "yyyy-MM-dd")}`} />}
+                </Link>
+                <AttendanceDatePicker selectedDate={selectedDate} />
+                <Link
+                  href={`?date=${format(nextDay, "yyyy-MM-dd")}`}
+                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background hover:bg-muted hover:text-foreground"
                 >
                   <ChevronRight className="h-4 w-4" />
-                </Button>
+                </Link>
               </div>
             </div>
           </CardHeader>

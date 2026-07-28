@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { auth } from "@/lib/auth"
+import { useState, useEffect, useCallback } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,7 +44,9 @@ interface LeaveType {
 }
 
 export default function LeaveRequestsPage() {
-  const [user, setUser] = useState<any>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const user = session?.user
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,16 +67,15 @@ export default function LeaveRequestsPage() {
   })
 
   useEffect(() => {
-    auth().then((session) => {
-      if (!session?.user) {
-        window.location.href = "/login"
-        return
-      }
-      setUser(session.user)
-      fetchLeaveRequests(session.user)
+    if (status === "unauthenticated") {
+      router.push("/login")
+      return
+    }
+    if (user) {
+      fetchLeaveRequests(user)
       fetchLeaveTypes()
-    })
-  }, [statusFilter])
+    }
+  }, [status, user, statusFilter])
 
   const fetchLeaveRequests = async (currentUser: any) => {
     setLoading(true)

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { logAudit } from "@/lib/audit"
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -17,8 +18,10 @@ export async function GET(req: Request) {
     const payrolls = await prisma.payroll.findMany({
       include: {
         employee: {
-          select: { firstName: true, lastName: true, employeeCode: true },
-          include: {
+          select: {
+            firstName: true,
+            lastName: true,
+            employeeCode: true,
             department: { select: { name: true } },
           },
         },
@@ -82,6 +85,15 @@ export async function POST(req: Request) {
         status: status || "DRAFT",
       },
     })
+
+    logAudit({
+      userId: session.user.id,
+      action: "CREATE",
+      resource: "payroll",
+      resourceId: payroll.id,
+      details: { employeeId, month, year, netSalary: netSalary.toString() },
+    })
+
     return NextResponse.json(payroll)
   } catch (error) {
     console.error("Failed to create payroll:", error)

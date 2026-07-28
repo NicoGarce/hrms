@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { logAudit } from "@/lib/audit"
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -27,6 +28,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         ...(status && { status }),
       },
     })
+
+    logAudit({
+      userId: session.user.id,
+      action: "UPDATE",
+      resource: "payroll",
+      resourceId: id,
+      details: { status, netSalary: netSalary?.toString() },
+    })
+
     return NextResponse.json(payroll)
   } catch (error) {
     console.error("Failed to update payroll:", error)
@@ -51,6 +61,14 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     await prisma.payroll.delete({
       where: { id },
     })
+
+    logAudit({
+      userId: session.user.id,
+      action: "DELETE",
+      resource: "payroll",
+      resourceId: id,
+    })
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Failed to delete payroll:", error)
