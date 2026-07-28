@@ -34,7 +34,7 @@ interface LeaveRequest {
   startDate: string
   endDate: string
   reason: string
-  status: "PENDING" | "APPROVED" | "REJECTED"
+  status: "PENDING" | "DEPARTMENT_APPROVED" | "APPROVED" | "REJECTED"
 }
 
 interface LeaveType {
@@ -72,35 +72,16 @@ export default function LeaveRequestsPage() {
       return
     }
     if (user) {
-      fetchLeaveRequests(user)
+      fetchLeaveRequests()
       fetchLeaveTypes()
     }
   }, [status, user, statusFilter])
 
-  const fetchLeaveRequests = async (currentUser: any) => {
+  const fetchLeaveRequests = async () => {
     setLoading(true)
     try {
       const response = await fetch(`/api/leave/requests?status=${statusFilter}`)
       const data = await response.json()
-      
-      // Filter based on role
-      const filtered = data.filter((req: LeaveRequest) => {
-        if (currentUser.role === "EMPLOYEE") {
-          return req.employeeId === currentUser.id
-        }
-        if (currentUser.role === "DEPARTMENT_HEAD") {
-          // Fetch employee to get departmentId
-          return fetch(`/api/employee/by-email?email=${currentUser.email}`)
-            .then(res => res.json())
-            .then(emp => {
-              // For department head, show their department's requests
-              // This is simplified - in production you'd include department in the API response
-              return true
-            })
-        }
-        return true // HR and SUPER_ADMIN see all
-      })
-      
       setLeaveRequests(data)
     } catch (error) {
       console.error("Failed to fetch leave requests:", error)
@@ -132,7 +113,7 @@ export default function LeaveRequestsPage() {
         toast.success("Leave request submitted")
         setSheetOpen(false)
         form.reset()
-        if (user) fetchLeaveRequests(user)
+        if (user) fetchLeaveRequests()
       } else {
         toast.error("Failed to submit leave request")
       }
@@ -147,7 +128,7 @@ export default function LeaveRequestsPage() {
       const response = await fetch(`/api/leave/requests/${id}/approve`, { method: "POST" })
       if (response.ok) {
         toast.success("Leave request approved")
-        if (user) fetchLeaveRequests(user)
+        if (user) fetchLeaveRequests()
       } else {
         toast.error("Failed to approve leave request")
       }
@@ -172,7 +153,7 @@ export default function LeaveRequestsPage() {
         setRejectDialogOpen(false)
         setRejectingRequestId(null)
         setRejectReason("")
-        if (user) fetchLeaveRequests(user)
+        if (user) fetchLeaveRequests()
       } else {
         toast.error("Failed to reject leave request")
       }
@@ -184,10 +165,25 @@ export default function LeaveRequestsPage() {
 
   const canApproveReject = user?.role === "DEPARTMENT_HEAD" || user?.role === "HR_ADMINISTRATOR" || user?.role === "SUPER_ADMINISTRATOR"
 
-  const statusColors = {
+  const canApproveOnStatus = (status: string) => {
+    if (user?.role === "DEPARTMENT_HEAD") return status === "PENDING"
+    if (user?.role === "HR_ADMINISTRATOR") return status === "DEPARTMENT_APPROVED"
+    if (user?.role === "SUPER_ADMINISTRATOR") return status === "PENDING" || status === "DEPARTMENT_APPROVED"
+    return false
+  }
+
+  const statusColors: Record<string, string> = {
     PENDING: "bg-chart-2 text-chart-2-foreground",
+    DEPARTMENT_APPROVED: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
     APPROVED: "bg-chart-3 text-chart-3-foreground",
     REJECTED: "bg-chart-4 text-chart-4-foreground",
+  }
+
+  const statusLabels: Record<string, string> = {
+    PENDING: "Pending",
+    DEPARTMENT_APPROVED: "Dept Approved",
+    APPROVED: "Approved",
+    REJECTED: "Rejected",
   }
 
   if (!user) return null
@@ -222,6 +218,13 @@ export default function LeaveRequestsPage() {
                 onClick={() => setStatusFilter("APPROVED")}
               >
                 Approved
+              </Button>
+              <Button
+                variant={statusFilter === "DEPARTMENT_APPROVED" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setStatusFilter("DEPARTMENT_APPROVED")}
+              >
+                Dept Approved
               </Button>
               <Button
                 variant={statusFilter === "REJECTED" ? "secondary" : "ghost"}
@@ -335,9 +338,9 @@ export default function LeaveRequestsPage() {
                         </td>
                         <td className="px-4 py-3 text-sm max-w-xs truncate">{request.reason}</td>
                         <td className="px-4 py-3">
-                          <Badge className={statusColors[request.status]}>{request.status}</Badge>
+                          <Badge className={statusColors[request.status]}>{statusLabels[request.status]}</Badge>
                         </td>
-                        {canApproveReject && request.status === "PENDING" && (
+                        {canApproveReject && canApproveOnStatus(request.status) && (
                           <td className="px-4 py-3">
                             <div className="flex gap-2">
                               <Button

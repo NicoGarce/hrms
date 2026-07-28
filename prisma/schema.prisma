@@ -163,6 +163,7 @@ model LeaveRequest {
 
 enum LeaveStatus {
   PENDING
+  DEPARTMENT_APPROVED
   APPROVED
   REJECTED
   @@map("leave_status")

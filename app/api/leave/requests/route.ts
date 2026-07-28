@@ -10,10 +10,27 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const statusFilter = searchParams.get("status") || "ALL"
+  const userRole = session.user.role as string
 
   try {
     const where: any = {
       ...(statusFilter !== "ALL" && { status: statusFilter }),
+    }
+
+    if (userRole === "EMPLOYEE") {
+      const employee = await prisma.employee.findFirst({
+        where: { user: { email: session.user.email } },
+        select: { id: true },
+      })
+      if (employee) where.employeeId = employee.id
+    } else if (userRole === "DEPARTMENT_HEAD") {
+      const employee = await prisma.employee.findFirst({
+        where: { user: { email: session.user.email } },
+        select: { departmentId: true },
+      })
+      if (employee?.departmentId) {
+        where.employee = { departmentId: employee.departmentId }
+      }
     }
 
     const leaveRequests = await prisma.leaveRequest.findMany({

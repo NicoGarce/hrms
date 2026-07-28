@@ -17,12 +17,42 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params
 
   try {
-    const leaveRequest = await prisma.leaveRequest.update({
+    const leaveRequest = await prisma.leaveRequest.findUnique({
       where: { id },
-      data: {
-        status: "APPROVED",
-        approvedBy: session.user.id,
-      },
+      include: { employee: { select: { departmentId: true } } },
+    })
+
+    if (!leaveRequest) {
+      return NextResponse.json({ error: "Leave request not found" }, { status: 404 })
+    }
+
+    if (userRole === "DEPARTMENT_HEAD") {
+      const headEmployee = await prisma.employee.findFirst({
+        where: { user: { email: session.user.email } },
+        select: { departmentId: true },
+      })
+      if (!headEmployee || headEmployee.departmentId !== leaveRequest.employee.departmentId) {
+        return NextResponse.json({ error: "Forbidden — not your department" }, { status: 403 })
+      }
+      if (leaveRequest.status !== "PENDING") {
+        return NextResponse.json({ error: "Can only approve pending requests" }, { status: 400 })
+      }
+    }
+
+    if (userRole === "HR_ADMINISTRATOR" && leaveRequest.status !== "DEPARTMENT_APPROVED") {
+      return NextResponse.json({ error: "Request must be approved by Department Head first" }, { status: 400 })
+    }
+
+    const nextStatus =
+      userRole === "SUPER_ADMINISTRATOR"
+        ? "APPROVED"
+        : userRole === "HR_ADMINISTRATOR"
+          ? "APPROVED"
+          : "DEPARTMENT_APPROVED"
+
+    const updated = await prisma.leaveRequest.update({
+      where: { id },
+      data: { status: nextStatus, approvedBy: session.user.id },
     })
 
     logAudit({
@@ -30,9 +60,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       action: "APPROVE",
       resource: "leave_request",
       resourceId: id,
+      details: { newStatus: nextStatus },
     })
 
-    return NextResponse.json(leaveRequest)
+    return NextResponse.json(updated)
   } catch (error) {
     console.error("Failed to approve leave request:", error)
     return NextResponse.json({ error: "Failed to approve leave request" }, { status: 500 })

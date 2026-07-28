@@ -21,17 +21,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const existingRequest = await prisma.leaveRequest.findUnique({
       where: { id },
+      include: { employee: { select: { departmentId: true } } },
     })
 
     if (!existingRequest) {
       return NextResponse.json({ error: "Leave request not found" }, { status: 404 })
     }
 
+    if (userRole === "DEPARTMENT_HEAD") {
+      const headEmployee = await prisma.employee.findFirst({
+        where: { user: { email: session.user.email } },
+        select: { departmentId: true },
+      })
+      if (!headEmployee || headEmployee.departmentId !== existingRequest.employee.departmentId) {
+        return NextResponse.json({ error: "Forbidden — not your department" }, { status: 403 })
+      }
+    }
+
     const leaveRequest = await prisma.leaveRequest.update({
       where: { id },
       data: {
         status: "REJECTED",
-        reason: `${existingRequest.reason}\n\nRejection reason: ${reason}`,
+        reason: `${existingRequest.reason}\n\nRejected by ${userRole}: ${reason}`,
         approvedBy: session.user.id,
       },
     })
